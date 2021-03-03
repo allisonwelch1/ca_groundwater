@@ -1,0 +1,123 @@
+---
+title: "data_cleaning"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+library(tidyverse)
+library(stringr)
+```
+
+
+```{r data import}
+setwd("/Users/allisonwelch/Documents/ESS 204 Humans in ESS/Project")
+#Crop data import, edit import data for USGS water usage
+df <- read.csv("https://www.nass.usda.gov/Statistics_by_State/California/Publications/AgComm/2015/2015cropyear.csv", header = T) #for USDA sourced data
+FIPS <- c("06001",	"06003", "06005", 	"06007",	"06009",	"06011",	"06013",	"06015",	"06017",	"06019",	"06021",	"06023",	"06025",	"06027",	"06029",	"06031",	"06033",	"06035",	"06037",	"06039",	"06041",	"06043",	"06045",	"06047",	"06051",	"06053",	"06055",	"06057",	"06059",	"06061",	"06063",	"06065",	"06067",	"06069",	"06071",	"06073",	"06075",	"06077",	"06079",	"06081",	"06083",	"06085",	"06087",	"06089",	"06091",	"06093",	"06095",	"06097",	"06099",	"06101",	"06103",	"06107",	"06109",	"06111",	"06113",	"06115")
+
+```
+
+```{r production data by crop}
+
+#Create Crop / County production matrix - Didn't end up using this
+crop_data <- df %>% 
+  select(Crop.Name, County, Production) %>%
+  spread(key = "County", value = "Production")
+
+#Remove NA
+crop_data[is.na(crop_data)] <- 0
+
+#Create data frame for county with max production value by crop
+max_crop <- crop_data %>% 
+  rownames_to_column('ID') %>%  # creates an ID number
+  gather(County, Production, "Alameda":"Yuba") %>% 
+  group_by(Crop.Name) %>% 
+  slice(which.max(Production)) 
+max_crop <- max_crop[max_crop$Production != 0, ]
+
+```
+
+```{r data by county}
+#Create County / Crop production matrix
+county_data <- df %>% 
+  select(Crop.Name, County, Production) %>%
+  spread(key = "Crop.Name", value = "Production")
+
+#Remove NA
+county_data[is.na(county_data)] <- 0
+
+#Create data frame for each county max production and for which crop
+max_county <- county_data %>% 
+  rownames_to_column('ID') %>%  # creates an ID number
+  gather(Crop, Production, "ALMOND HULLS":"WOOL") %>% 
+  group_by(County) %>% 
+  slice(which.max(Production)) 
+max_county <- max_county[-50,]
+max_county <- max_county[-50,]
+max_county$FIPS <- FIPS
+max_county <- max_county[max_county$Production != 0, ]
+#########################################################
+write.csv(max_county, file = "max_county_production.csv")
+#########################################################
+```
+
+```{r dollar value by county}
+
+#Didn't end up using this either 
+crop_data <- df %>% 
+  select(Crop.Name, County, Production) %>%
+  spread(key = "County", value = "Production")
+
+#Remove NA
+crop_data[is.na(crop_data)] <- 0
+
+#Create data frame for county with max production value by crop
+max_crop <- crop_data %>% 
+  rownames_to_column('ID') %>%  # creates an ID number
+  gather(County, Production, "Alameda":"Yuba") %>% 
+  group_by(Crop.Name) %>% 
+  slice(which.max(Production)) 
+max_crop <- max_crop[max_crop$Production != 0, ]
+
+```
+
+```{r dollar value data by county}
+
+#Create County / Crop production matrix for total value 
+county_data_dollar <- df %>% 
+  select(Crop.Name, County, Value) %>%
+  spread(key = "Crop.Name", value = "Value")
+
+#Remove NA
+county_data_dollar[is.na(county_data_dollar)] <- 0
+
+#sum values
+county_data_dollar$Total <- as.numeric(apply(county_data_dollar[,2:254], 1, sum))
+
+county_dollar_total <- county_data_dollar %>% 
+  select(County, Total)
+county_dollar_total <- county_dollar_total[-50,]
+county_dollar_total <- county_dollar_total[-50,]
+county_dollar_total$FIPS <- FIPS
+##############################################################
+write.csv(county_dollar_total, file = "ag_value_by_county.csv")
+##############################################################
+
+#Create data frame for each county max dollar value and for which crop - didn't end up using this
+max_county_dollar <- county_data_dollar %>% 
+  rownames_to_column('ID') %>%  # creates an ID number
+  gather(Crop, Value, "ALMOND HULLS":"WOOL") %>% 
+  group_by(County) %>% 
+  slice(which.max(Value)) 
+max_county_dollar <- max_county_dollar[max_county_dollar$Value != 0, ]
+max_county_dollar <- max_county_dollar[-50,]
+max_county_dollar <- max_county_dollar[-50,]
+max_county_dollar$FIPS <- FIPS
+
+
+```
+
